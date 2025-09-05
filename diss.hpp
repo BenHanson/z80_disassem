@@ -45,6 +45,7 @@ struct diss_data
 	const uint8_t* _end = nullptr;
 	const uint8_t* _curr = nullptr;
 	uint16_t _curr_addr = 0;
+	std::string_view _curr_inst;
 	const uint8_t* next = nullptr;
 	uint16_t next_addr = 0;
 	lexertl::basic_string_token<uint32_t> _blocks;

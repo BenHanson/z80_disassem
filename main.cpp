@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <format>
 #include <iostream>
 #include <map>
 #include <queue>
@@ -56,7 +57,9 @@ static bool reg(diss_data& diss)
 	}
 
 	if (*diss._curr == 0xE9)
-		throw std::runtime_error("Jump to register");
+		std::cerr << std::format("Warning: Jump to register {}: {}\n",
+			diss._curr_addr,
+			diss._curr_inst);
 
 	return false;
 }
@@ -110,7 +113,7 @@ static const uint8_t* address(uint16_t addr, const char* bytes)
 static void scan_code(const lexertl::memory_file& bytes, const program& program,
 	diss_data& diss)
 {
-	std::string str;
+	std::string instr;
 
 	for (; !diss._queue.empty(); diss._queue.pop())
 	{
@@ -130,11 +133,12 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 			}
 
 			diss.next = diss._curr;
-			str = mnemonic(program, base::decimal, diss.next, relative::offset);
-			//std::cout << diss._curr_addr << ": " << str << '\n';
+			instr = mnemonic(program, base::decimal, diss.next, relative::offset);
+			//std::cout << diss._curr_addr << ": " << instr << '\n';
 
 			const uint32_t next_addr = ((diss.next - diss._start) + diss._start_addr) & 0xffffffff;
 
+			diss._curr_inst = instr;
 			diss.next_addr = next_addr & 0xffff;
 			diss._blocks.insert(std::make_pair(diss._curr_addr, next_addr > 65535 ?
 				65536 :
