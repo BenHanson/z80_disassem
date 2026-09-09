@@ -1,9 +1,7 @@
 CXX = g++
-CXXFLAGS = -O -std=c++20 -Wall -I ../lexertl17/include -I ../parsertl17/include
+CXXFLAGS = -O3 -std=c++20 -Wall -I ../lexertl17/include -I ../parsertl17/include
 
-LDFLAGS = -O
-
-LIBS = 
+LDFLAGS = -O3
 
 all: z80_disassem
 
@@ -18,10 +16,6 @@ disassem.o: ../z80_assembler/disassem.cpp
 
 main.o: main.cpp
 	$(CXX) $(CXXFLAGS) -o main.o -c main.cpp
-
-library:
-
-binary:
 
 clean:
 	- rm *.o
