@@ -168,8 +168,15 @@ int main(int argc, const char* argv[])
 
 	try
 	{
-		lexertl::memory_file bytes(argv[1]);
+		auto pathname = argv[1];
+		lexertl::memory_file bytes(pathname);
+
+		if (!bytes.data())
+			throw std::runtime_error(std::format("Failed to load {}",
+				pathname));
+
 		uint16_t start_addr = atoi(argv[2]) & 0xffff; // 25600 for Pyramania
+		auto entry_point = atoi(argv[3]);
 		diss_data diss
 		{
 			start_addr,
@@ -181,7 +188,8 @@ int main(int argc, const char* argv[])
 
 		data._program._org = diss._start_addr;
 		data._program._memory.assign(diss._start, diss._end);
-		diss._queue.push(atoi(argv[3]) & 0xffff); // Entry point. 38400 for Pyramania
+		// Entry point. 38400 for Pyramania
+		diss._queue.push(entry_point & 0xffff);
 		scan_code(bytes, data._program, diss);
 
 		for (const auto& [first, second] : diss._blocks._ranges)
