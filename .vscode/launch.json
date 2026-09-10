@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "console": "internalConsole",
+    "configurations": [
+        {
+            "name": "LLDB",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/z80_disassem",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "make",
+            "args": [
+                "/home/ben/Dev/test/z80_assembler/sna/pyramania.sna",
+                "25600",
+                "38400"
+            ]
+        }
+    ]
+}
