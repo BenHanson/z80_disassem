@@ -18,56 +18,13 @@
 #include <string>
 #include <utility>
 
-static bool absolute(diss_data& diss)
-{
-	uint16_t addr = 0;
-
-	addr = *(diss._curr + 1);
-	addr |= *(diss._curr + 2) << 8;
-
-	if (!diss.contains(addr))
-		diss._queue.push(addr);
-
-	return *diss._curr == std::bit_cast<uint8_t>(opcode::JP);
-}
-
-static bool relative(diss_data& diss)
-{
-	const char offset = *(diss._curr + 1);
-
-	if (const uint16_t addr = (diss._curr_addr + 2 + offset) & 0xffff;
-		!diss.contains(addr))
-	{
-		diss._queue.push(addr);
-	}
-
-	return *diss._curr == std::bit_cast<uint8_t>(opcode::JR);
-}
-
-static bool reg(diss_data& diss)
-{
-	switch (*diss._curr)
-	{
-	case 0xDD:
-	case 0xFD:
-		++diss._curr;
-		break;
-	default:
-		break;
-	}
-
-	if (*diss._curr == 0xE9)
-		std::cerr << std::format("Warning: Jump to register {}: {}\n",
-			diss._curr_addr,
-			diss._curr_inst);
-
-	return false;
-}
-
-static bool ret(diss_data&)
-{
-	return true;
-}
+// Forward declare functions referenced by g_actions
+bool absolute(diss_data& diss);
+bool extended(diss_data& diss);
+bool reg(diss_data& diss);
+bool relative(diss_data& diss);
+bool ret(diss_data&);
+bool rst(diss_data& diss);
 
 const std::map<opcode, bool (*)(diss_data&)> g_actions =
 {
@@ -81,9 +38,10 @@ const std::map<opcode, bool (*)(diss_data&)> g_actions =
 	{ opcode::CALL_PO, absolute },
 	{ opcode::CALL_Z, absolute },
 	{ opcode::DJNZ, relative },
+	{ opcode::ED_prefix, extended },
 	{ opcode::JP_HL, reg },
-	{ opcode::JP_IX, reg },
-	{ opcode::JP_IY, reg },
+	{ opcode::IX_prefix, reg },
+	{ opcode::IY_prefix, reg },
 	{ opcode::JP, absolute },
 	{ opcode::JP_C, absolute },
 	{ opcode::JP_M, absolute },
@@ -98,8 +56,98 @@ const std::map<opcode, bool (*)(diss_data&)> g_actions =
 	{ opcode::JR_NC, relative },
 	{ opcode::JR_NZ, relative },
 	{ opcode::JR_Z, relative },
-	{ opcode::RET, ret }
+	{ opcode::RET, ret },
+	{ opcode::RST00, rst },
+	{ opcode::RST08, rst },
+	{ opcode::RST10, rst },
+	{ opcode::RST18, rst },
+	{ opcode::RST20, rst },
+	{ opcode::RST28, rst },
+	{ opcode::RST30, rst },
+	{ opcode::RST38, rst }
 };
+
+static bool absolute(diss_data& diss)
+{
+	uint16_t addr = 0;
+
+	addr = *(diss._curr + 1);
+	addr |= *(diss._curr + 2) << 8;
+
+	if (!diss.contains(addr))
+		diss._queue.push(addr);
+
+	// JP unconditionally terminates current block
+	return *diss._curr == std::bit_cast<uint8_t>(opcode::JP);
+}
+
+static bool extended(diss_data& diss)
+{
+	++diss._curr;
+
+	switch (static_cast<opcode>(*diss._curr))
+	{
+	case opcode::RETI:
+	case opcode::RETN:
+		// Unconditionally terminates current block
+		return true;
+	default:
+		break;
+	}
+
+	return false;
+}
+
+static bool reg(diss_data& diss)
+{
+	switch (static_cast<opcode>(*diss._curr))
+	{
+	case opcode::IX_prefix:
+	case opcode::IY_prefix:
+		++diss._curr;
+		break;
+	default:
+		break;
+	}
+
+	if (static_cast<opcode>(*diss._curr) == opcode::JP_HL)
+		std::cerr << std::format("Warning: Jump to register {}: {}\n",
+			diss._curr_addr,
+			diss._curr_inst);
+
+	// Need to emulate CPU in order to jump to an address specified
+	// by a register, so for now return false as we don't support that
+	return false;
+}
+
+static bool relative(diss_data& diss)
+{
+	const char offset = *(diss._curr + 1);
+
+	if (const uint16_t addr = (diss._curr_addr + 2 + offset) & 0xffff;
+		!diss.contains(addr))
+	{
+		diss._queue.push(addr);
+	}
+
+	// JR unconditionally terminates current block
+	return *diss._curr == std::bit_cast<uint8_t>(opcode::JR);
+}
+
+static bool ret(diss_data&)
+{
+	// Unconditionally terminates current block
+	return true;
+}
+
+static bool rst(diss_data& diss)
+{
+	// .sna files do not include ROM, so don't attempt to
+	// disassemble low addresses (RST addresses are single byte)
+
+	// RST performs a type of CALL
+	return false;
+}
 
 static const uint8_t* address(uint16_t addr, const char* bytes)
 {

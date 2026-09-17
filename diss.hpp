@@ -19,8 +19,9 @@ enum class opcode : uint8_t
 	CALL_Z = 0xCC,
 	DJNZ = 0x10,
 	JP_HL = 0xE9,
-	JP_IX = 0xDD,
-	JP_IY = 0xFD,
+	ED_prefix = 0xED,
+	IX_prefix = 0xDD,
+	IY_prefix = 0xFD,
 	JP = 0xC3,
 	JP_C = 0xDA,
 	JP_M = 0xFA,
@@ -35,7 +36,17 @@ enum class opcode : uint8_t
 	JR_NC = 0x30,
 	JR_NZ = 0x20,
 	JR_Z = 0x28,
-	RET = 0xC9
+	RET = 0xC9,
+	RETI = 0x4D,
+	RETN = 0x45,
+	RST00 = 0xC7,
+	RST08 = 0xCF,
+	RST10 = 0xD7,
+	RST18 = 0xDF,
+	RST20 = 0xE7,
+	RST28 = 0xEF,
+	RST30 = 0xF7,
+	RST38 = 0xFF
 };
 
 struct diss_data
