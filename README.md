@@ -1,7 +1,39 @@
 # z80_disassem
 
-Auto disassemble a `.sna` file.
+Auto disassemble a <a href="https://sinclair.wiki.zxnet.co.uk/wiki/SNA_format">.sna</a> file.
 
+The following OP codes are recognised:
+
+* `CALL`
+* `CALL C`
+* `CALL M`
+* `CALL NC`
+* `CALL NZ`
+* `CALL P`
+* `CALL PE`
+* `CALL PO`
+* `CALL Z`
+* `DJNZ`
+* `RETI`
+* `RETN`
+* `JP`
+* `JP C`
+* `JP M`
+* `JP NC`
+* `JP NZ`
+* `JP P`
+* `JP PE`
+* `JP PO`
+* `JP Z`
+* `JR`
+* `JR C`
+* `JR NC`
+* `JR NZ`
+* `JR Z`
+* `RET`
+* `RST`
+
+As supporting `JP (HL)`, `JP (IX)`, `JP (IY)` would requires simulating the opcodes, these are currently not supported.
 
 ## Building
 
