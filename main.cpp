@@ -67,7 +67,7 @@ const std::map<opcode, bool (*)(diss_data&)> g_actions =
 	{ opcode::RST38, rst }
 };
 
-static bool absolute(diss_data& diss)
+bool absolute(diss_data& diss)
 {
 	uint16_t addr = 0;
 
@@ -81,7 +81,7 @@ static bool absolute(diss_data& diss)
 	return *diss._curr == std::bit_cast<uint8_t>(opcode::JP);
 }
 
-static bool extended(diss_data& diss)
+bool extended(diss_data& diss)
 {
 	++diss._curr;
 
@@ -98,7 +98,7 @@ static bool extended(diss_data& diss)
 	return false;
 }
 
-static bool reg(diss_data& diss)
+bool reg(diss_data& diss)
 {
 	switch (static_cast<opcode>(*diss._curr))
 	{
@@ -120,7 +120,7 @@ static bool reg(diss_data& diss)
 	return false;
 }
 
-static bool relative(diss_data& diss)
+bool relative(diss_data& diss)
 {
 	const char offset = *(diss._curr + 1);
 
@@ -134,13 +134,13 @@ static bool relative(diss_data& diss)
 	return *diss._curr == std::bit_cast<uint8_t>(opcode::JR);
 }
 
-static bool ret(diss_data&)
+bool ret(diss_data&)
 {
 	// Unconditionally terminates current block
 	return true;
 }
 
-static bool rst(diss_data& diss)
+bool rst(diss_data& diss)
 {
 	// .sna files do not include ROM, so don't attempt to
 	// disassemble low addresses (RST addresses are single byte)
@@ -181,7 +181,7 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 			}
 
 			diss.next = diss._curr;
-			instr = mnemonic(program, base::decimal, diss.next, relative::offset);
+			instr = mnemonic(program, base::decimal, diss.next, relative::absolute);
 			//std::cout << diss._curr_addr << ": " << instr << '\n';
 
 			const uint32_t next_addr = ((diss.next - diss._start) + diss._start_addr) & 0xffffffff;
@@ -206,6 +206,8 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 	}
 }
 
+// pyramania.sna 25600 38400
+// scuba.sna 24576 60895
 int main(int argc, const char* argv[])
 {
 	if (argc != 4)
@@ -223,7 +225,7 @@ int main(int argc, const char* argv[])
 			throw std::runtime_error(std::format("Failed to load {}",
 				pathname));
 
-		uint16_t start_addr = atoi(argv[2]) & 0xffff; // 25600 for Pyramania
+		uint16_t start_addr = atoi(argv[2]) & 0xffff;
 		auto entry_point = atoi(argv[3]);
 		diss_data diss
 		{
@@ -236,7 +238,6 @@ int main(int argc, const char* argv[])
 
 		data._program._org = diss._start_addr;
 		data._program._memory.assign(diss._start, diss._end);
-		// Entry point. 38400 for Pyramania
 		diss._queue.push(entry_point & 0xffff);
 		scan_code(bytes, data._program, diss);
 
