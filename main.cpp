@@ -210,14 +210,16 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 // scuba.sna 24576 60895
 int main(int argc, const char* argv[])
 {
-	if (argc != 4)
+	if ((argc != 4 && argc != 5) || (argc == 5 && strcmp(argv[4], "--mnemonics")))
 	{
-		std::cout << "z80_disassem <pathname (asm)> <start of code> <entry point>\n";
+		std::cout << "z80_disassem <pathname (asm)> <start of code> "
+			"<entry point> [--mnemonics]\n";
 		return 1;
 	}
 
 	try
 	{
+		bool mnemonics_only = argc == 5;
 		auto pathname = argv[1];
 		lexertl::memory_file bytes(pathname);
 
@@ -258,7 +260,8 @@ int main(int argc, const char* argv[])
 			data._program._mem_type.emplace_back(program::block::type::db,
 				65536 - last);
 
-		dump(data._program, base::decimal, relative::absolute);
+		dump(data._program, base::decimal, relative::absolute,
+			mnemonics_only ? dump_mode::mnemonics_only : dump_mode::full);
 	}
 	catch (const std::exception& e)
 	{
