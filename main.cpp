@@ -110,14 +110,12 @@ bool reg(diss_data& diss)
 		break;
 	}
 
-	if (static_cast<opcode>(*diss._curr) == opcode::JP_HL)
+	if (*diss._curr == std::bit_cast<uint8_t>(opcode::JP_HL))
 		std::cerr << std::format("Warning: Jump to register {}: {}\n",
 			diss._curr_addr,
 			diss._curr_inst);
 
-	// Need to emulate CPU in order to jump to an address specified
-	// by a register, so for now return false as we don't support that
-	return false;
+	return *diss._curr == std::bit_cast<uint8_t>(opcode::JP_HL);
 }
 
 bool relative(diss_data& diss)
@@ -189,8 +187,8 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 			diss._curr_inst = instr;
 			diss.next_addr = next_addr & 0xffff;
 			diss._blocks.insert(std::make_pair(diss._curr_addr, next_addr > 65535 ?
-				65536 :
-				diss.next_addr));
+				65535 :
+				diss.next_addr - 1));
 
 			if (auto iter = g_actions.find(static_cast<opcode>(*diss._curr));
 				iter != g_actions.end() &&
@@ -252,8 +250,8 @@ int main(int argc, const char* argv[])
 			}
 
 			data._program._mem_type.
-				emplace_back(program::block::type::code, second - first);
-			last = second;
+				emplace_back(program::block::type::code, second + 1 - first);
+			last = second + 1;
 		}
 
 		if (last < 65536)
