@@ -20,11 +20,14 @@
 
 // Forward declare functions referenced by g_actions
 bool absolute(diss_data& diss);
-bool extended(diss_data& diss);
+bool dd(diss_data& diss);
+bool ed(diss_data& diss);
+bool fd(diss_data& diss);
 bool reg(diss_data& diss);
 bool relative(diss_data& diss);
 bool ret(diss_data&);
 bool rst(diss_data& diss);
+bool word(diss_data& diss);
 
 const std::map<opcode, bool (*)(diss_data&)> g_actions =
 {
@@ -38,10 +41,12 @@ const std::map<opcode, bool (*)(diss_data&)> g_actions =
 	{ opcode::CALL_PO, absolute },
 	{ opcode::CALL_Z, absolute },
 	{ opcode::DJNZ, relative },
-	{ opcode::ED_prefix, extended },
-	{ opcode::JP_HL, reg },
+	{ opcode::DD_prefix, dd },
+	{ opcode::ED_prefix, ed },
+	{ opcode::FD_prefix, fd },
 	{ opcode::IX_prefix, reg },
 	{ opcode::IY_prefix, reg },
+	{ opcode::JP_HL, reg },
 	{ opcode::JP, absolute },
 	{ opcode::JP_C, absolute },
 	{ opcode::JP_M, absolute },
@@ -56,6 +61,8 @@ const std::map<opcode, bool (*)(diss_data&)> g_actions =
 	{ opcode::JR_NC, relative },
 	{ opcode::JR_NZ, relative },
 	{ opcode::JR_Z, relative },
+	{ opcode::LD_HL_nn, word },
+	{ opcode::LD_nn_HL, word },
 	{ opcode::RET, ret },
 	{ opcode::RST00, rst },
 	{ opcode::RST08, rst },
@@ -81,16 +88,58 @@ bool absolute(diss_data& diss)
 	return *diss._curr == std::bit_cast<uint8_t>(opcode::JP);
 }
 
-bool extended(diss_data& diss)
+bool dd(diss_data& diss)
 {
 	++diss._curr;
 
 	switch (static_cast<opcode>(*diss._curr))
 	{
+	case opcode::LD_IX_nn:
+	case opcode::LD_nn_IX:
+		word(diss);
+		break;
+	}
+
+	return false;
+}
+
+bool ed(diss_data& diss)
+{
+	++diss._curr;
+
+	switch (static_cast<opcode>(*diss._curr))
+	{
+	case opcode::ED_LD_HL_nn:
+	case opcode::ED_LD_nn_HL:
+	case opcode::LD_BC_nn:
+	case opcode::LD_DE_nn:
+	case opcode::LD_SP_nn:
+	case opcode::LD_nn_BC:
+	case opcode::LD_nn_DE:
+	case opcode::LD_nn_SP:
+		word(diss);
+		break;
 	case opcode::RETI:
 	case opcode::RETN:
 		// Unconditionally terminates current block
 		return true;
+	default:
+		break;
+	}
+
+	return false;
+}
+
+bool fd(diss_data& diss)
+{
+	++diss._curr;
+
+	switch (static_cast<opcode>(*diss._curr))
+	{
+	case opcode::LD_IY_nn:
+	case opcode::LD_nn_IY:
+		word(diss);
+		break;
 	default:
 		break;
 	}
@@ -147,6 +196,17 @@ bool rst(diss_data& diss)
 	return false;
 }
 
+bool word(diss_data& diss)
+{
+	uint16_t word = 0;
+
+	++diss._curr;
+	word = *diss._curr;
+	word |= *++diss._curr << 8;
+	diss._dw.insert(std::make_pair(word, word + 1));
+	return false;
+}
+
 static const uint8_t* address(uint16_t addr, const char* bytes)
 {
 	// sna does not hold ROM code
@@ -186,7 +246,7 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 
 			diss._curr_inst = instr;
 			diss.next_addr = next_addr & 0xffff;
-			diss._blocks.insert(std::make_pair(diss._curr_addr, next_addr > 65535 ?
+			diss._code.insert(std::make_pair(diss._curr_addr, next_addr > 65535 ?
 				65535 :
 				diss.next_addr - 1));
 
@@ -204,6 +264,8 @@ static void scan_code(const lexertl::memory_file& bytes, const program& program,
 	}
 }
 
+// dd.sna 24576 51200
+// jsw.sna 32765 34463
 // pyramania.sna 25600 38400
 // scuba.sna 24576 60895
 int main(int argc, const char* argv[])
@@ -241,12 +303,35 @@ int main(int argc, const char* argv[])
 		diss._queue.push(entry_point & 0xffff);
 		scan_code(bytes, data._program, diss);
 
-		for (const auto& [first, second] : diss._blocks._ranges)
+		for (const auto [first, second] : diss._code._ranges)
 		{
 			if (last < first)
 			{
-				data._program._mem_type.
-					emplace_back(program::block::type::db, first - last);
+				auto iter = diss._dw._ranges.begin();
+
+				// Remove used dw entries
+				for (; iter != diss._dw._ranges.end() && iter->second + 1 < last;
+					iter = diss._dw._ranges.begin())
+				{
+					diss._dw._ranges.erase(iter);
+				}
+
+				for (; iter != diss._dw._ranges.end() && iter->first < first; ++iter)
+				{
+					auto count = iter->first - last;
+
+					if (count > 0)
+						data._program._mem_type.emplace_back(program::block::type::db,
+							iter->first - last);
+
+					data._program._mem_type.emplace_back(program::block::type::dw,
+						iter->second + 1 - iter->first);
+					last = iter->second + 1;
+				}
+
+				if (last < first)
+					data._program._mem_type.emplace_back(program::block::type::db,
+						first - last);
 			}
 
 			data._program._mem_type.

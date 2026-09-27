@@ -17,13 +17,15 @@ enum class opcode : uint8_t
 	CALL_PE = 0xEC,
 	CALL_PO = 0xE4,
 	CALL_Z = 0xCC,
+	DD_prefix = 0xDD,
 	DJNZ = 0x10,
-	JP_HL = 0xE9,
 	ED_prefix = 0xED,
+	FD_prefix = 0xFD,
 	IX_prefix = 0xDD,
 	IY_prefix = 0xFD,
 	JP = 0xC3,
 	JP_C = 0xDA,
+	JP_HL = 0xE9,
 	JP_M = 0xFA,
 	JP_NC = 0xD2,
 	JP_NZ = 0xC2,
@@ -36,6 +38,20 @@ enum class opcode : uint8_t
 	JR_NC = 0x30,
 	JR_NZ = 0x20,
 	JR_Z = 0x28,
+	LD_BC_nn = 0x4B,
+	LD_DE_nn = 0x5B,
+	LD_HL_nn = 0x2A,
+	ED_LD_HL_nn = 0x6B,
+	LD_SP_nn = 0x7B,
+	LD_IX_nn = 0x2A,
+	LD_IY_nn = 0x2A,
+	LD_nn_BC = 0x43,
+	LD_nn_DE = 0x53,
+	LD_nn_HL = 0x22,
+	ED_LD_nn_HL = 63,
+	LD_nn_SP = 0x73,
+	LD_nn_IX = 0x22,
+	LD_nn_IY = 0x22,
 	RET = 0xC9,
 	RETI = 0x4D,
 	RETN = 0x45,
@@ -59,12 +75,13 @@ struct diss_data
 	std::string_view _curr_inst;
 	const uint8_t* next = nullptr;
 	uint16_t next_addr = 0;
-	lexertl::basic_string_token<uint32_t> _blocks;
+	lexertl::basic_string_token<uint32_t> _code;
+	lexertl::basic_string_token<uint32_t> _dw;
 	std::queue<uint16_t> _queue;
 
 	bool contains(const uint16_t addr) const
 	{
-		return std::ranges::any_of(_blocks._ranges, [addr](const auto& pair)
+		return std::ranges::any_of(_code._ranges, [addr](const auto& pair)
 			{
 				return addr >= pair.first && addr < pair.second;
 			});
