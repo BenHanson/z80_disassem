@@ -2,6 +2,10 @@
 
 Auto disassemble a <a href="https://sinclair.wiki.zxnet.co.uk/wiki/SNA_format">.sna</a> file.
 
+For simple auto-disassembly most instructions can be ignored, as it is only instructions that unconditionally terminate a block of code or, conditionally or unconditionally, change the Program Counter that need tracking.
+
+This means for example that conditional `RET` OP codes (e.g. `RET Z`) can be ignored as they do not meet this criteria.
+
 The following OP codes are recognised:
 
 * `CALL`
@@ -33,7 +37,7 @@ The following OP codes are recognised:
 * `RET`
 * `RST`
 
-As supporting `JP (HL)`, `JP (IX)`, `JP (IY)` would requires simulating the opcodes, these are currently not supported.
+As processing `JP (HL)`, `JP (IX)` and `JP (IY)` would requires simulating the opcodes, these are currently not traced. They do however terminate a block, just like `JP nn`.
 
 ## Building
 
