@@ -98,6 +98,8 @@ bool dd(diss_data& diss)
 	case opcode::LD_nn_IX:
 		word(diss);
 		break;
+	default:
+		break;
 	}
 
 	return false;
